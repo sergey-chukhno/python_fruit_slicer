@@ -104,7 +104,7 @@ class Game:
         self.bombs = []
         self.ice_cubes = []
         self.frozen = False
-        self.frozen_timer = 15000
+        self.frozen_timer = 0
         self.mode = None  # 'mouse' or 'keyboard'
         self.speed = INITIAL_SPEED
 
@@ -160,7 +160,7 @@ class Game:
 
     def update(self):
         current_time = pygame.time.get_ticks()
-        if self.frozen and current_time - self.frozen_timer >= 15000:  # 15 seconds
+        if self.frozen and current_time - self.frozen_timer >= 3000:  # 15 seconds
             self.frozen = False
 
         if not self.frozen:
