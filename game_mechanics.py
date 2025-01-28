@@ -54,7 +54,8 @@ class Fruit:
     def draw(self, screen):
         screen.blit(self.image, self.rect)
         text = FONT.render(self.letter, True, WHITE)
-        screen.blit(text, self.rect.center)
+        text_rect = text.get_rect(center = self.rect.center)
+        screen.blit(text, text_rect)
 
 class Bomb:
     def __init__(self, letter, image, x, y, vx, vy):
@@ -72,7 +73,8 @@ class Bomb:
     def draw(self, screen):
         screen.blit(self.image, self.rect)
         text = FONT.render(self.letter, True, RED)
-        screen.blit(text, self.rect.center)
+        text_rect = text.get_rect(center = self.rect.center)
+        screen.blit(text, text_rect)
 
 class IceCube:
     def __init__(self, letter, image, x, y, vx, vy):
@@ -90,8 +92,9 @@ class IceCube:
     def draw(self, screen):
         screen.blit(self.image, self.rect)
         text = FONT.render(self.letter, True, WHITE)
-        screen.blit(text, self.rect.center)
-
+        text_rect = text.get_rect(center = self.rect.center)
+        screen.blit(text, text_rect)
+        
 class Game:
     def __init__(self):
         self.score = 0
