@@ -103,7 +103,7 @@ class Game:
         self.frozen = False
         self.frozen_timer = 15000
         self.mode = None  # 'mouse' or 'keyboard'
-        self.speed = INITIAL_SPEED  # Start with slower speed
+        self.speed = INITIAL_SPEED
 
     def get_max_objects(self):
         return 1 + self.level   
