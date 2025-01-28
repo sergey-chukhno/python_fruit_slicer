@@ -234,7 +234,7 @@ class Game:
             screen.blit(frozen_text, (SCREEN_WIDTH - 150, 10))
 
     def end_game(self):
-        print(f"Game over! Final score: {self.score}")
+        print(f"Your final score: {self.score}")
         pygame.quit()
         sys.exit()
 
