@@ -19,7 +19,7 @@ FONT = pygame.font.Font(None, 36)
 
 # Game settings
 GRAVITY = 0.5  
-BASE_SPEED = 0.1  # Base speed for level 2 and above
+BASE_SPEED = 0.005  # Base speed for level 2 and above
 INITIAL_SPEED = BASE_SPEED / 2  # Initial speed for level 1 (half of base speed)
 LEVEL_SPEED_INCREASE = 1.3
 FRUIT_LETTERS = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
@@ -40,11 +40,16 @@ class Fruit:
         self.rect = self.image.get_rect(topleft=(x, y))
         self.vx = vx
         self.vy = vy
+        self.has_peaked = False
+        
 
     def update_position(self):
         self.rect.x += self.vx
         self.rect.y += self.vy
         self.vy += GRAVITY 
+
+        if self.vy >= 0:
+            self.has_peaked = True
 
     def draw(self, screen):
         screen.blit(self.image, self.rect)
@@ -101,7 +106,7 @@ class Game:
         self.speed = INITIAL_SPEED  # Start with slower speed
 
     def get_max_objects(self):
-        return 1 + (self.level * 1)  
+        return 1 + self.level   
 
     def get_total_objects(self):
         return len(self.fruits) + len(self.bombs) + len(self.ice_cubes)
@@ -131,7 +136,7 @@ class Game:
             self.fruits = [fruit for fruit in self.fruits if fruit not in sliced_fruits]
             print(f"Combo! Sliced {len(sliced_fruits)} fruits!")
             
-            # Level up every 20 points
+            # Level up every 10 points
             if self.score > 0 and self.score % 10 == 0:
                 self.level += 1
                 if self.level == 2:
@@ -163,24 +168,26 @@ class Game:
             for ice_cube in self.ice_cubes:
                 ice_cube.update_position()
 
-            # Remove objects that are no longer on the screen 
-            self.fruits = [fruit for fruit in self.fruits if fruit.rect.y < SCREEN_HEIGHT]
+            # Remove objects that are no longer on the screen
+
+            # For fruits, we check if they have peaked and fallen below the screen to get a strike
+            fruits_to_remove = []
+            for fruit in self.fruits[:]:
+                if fruit.has_peaked and fruit.rect.y >= SCREEN_HEIGHT: 
+                    self.strikes += 1
+                    fruits_to_remove.append(fruit)
+                    print(f'Strike! Missed a fruit. Strikes: {self.strikes}')
+
+            for fruit in fruits_to_remove:
+                self.fruits.remove(fruit)
+
             self.bombs = [bomb for bomb in self.bombs if bomb.rect.y < SCREEN_HEIGHT]
             self.ice_cubes = [ice_cube for ice_cube in self.ice_cubes if ice_cube.rect.y < SCREEN_HEIGHT]
 
-            # Check for strikes
-            for fruit in self.fruits[:]:
-                if fruit.rect.y >= SCREEN_HEIGHT:
-                    self.strikes += 1
-                    self.fruits.remove(fruit)
-                    print(f"Strike! Missed a fruit. Strikes: {self.strikes}")
-
-            
             if self.strikes >= 3:
                 print("Game over! You missed too many fruits.")
                 self.end_game()
 
-            # Spawn new objects only if below the level's maximum
             if self.get_total_objects() < self.get_max_objects():
                 self.spawn_objects()
 
@@ -189,7 +196,7 @@ class Game:
         y = SCREEN_HEIGHT 
         vx = random.uniform(-self.speed, self.speed)
         
-        base_upward_velocity = 20 
+        base_upward_velocity = 21 
         vy = random.uniform(-base_upward_velocity * 1.2, -base_upward_velocity)
 
         # Only spawn if we haven't reached the maximum objects for this level
@@ -237,7 +244,7 @@ def main():
     clock = pygame.time.Clock()
 
     game = Game()
-    game.mode = 'keyboard'  # Change to 'mouse' for mouse mode
+    game.mode = 'keyboard'
 
     while True:
         for event in pygame.event.get():
