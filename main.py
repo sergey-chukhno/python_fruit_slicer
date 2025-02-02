@@ -7,7 +7,8 @@ import os
 pygame.init()
 pygame.mixer.init()
 
-# Screen settings
+# Game settings
+
 SCREEN_WIDTH = 800
 SCREEN_HEIGHT = 600
 screen = pygame.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT))
@@ -20,7 +21,6 @@ cursor_img = pygame.image.load("Image/shuriken_cursor.png")
 cursor_img = pygame.transform.scale(cursor_img, (50, 50))
 pygame.mouse.set_visible(False)
 
-# Colors
 WHITE = (255, 255, 255)
 BLACK = (0, 0, 0)
 RED = (255, 0, 0)
@@ -38,7 +38,9 @@ FONT = pygame.font.Font("Image/CFCrayons-Regular.ttf", 50)
 font_s = pygame.font.Font("Image/CFCrayons-Regular.ttf", 25)
 font_xs = pygame.font.Font("Image/CFCrayons-Regular.ttf", 15)
 
-# Audio files
+# Game assets 
+
+#  Audio files
 
 menu_music =  pygame.mixer_music.load("Audio/Menu_Music.mp3")
 next_sound = pygame.mixer.Sound("Audio/sound-effects/Next_button.wav")
@@ -57,7 +59,7 @@ best_sound =  pygame.mixer.Sound("Audio/sound-effects/New-best-score.wav")
 throw_sound = pygame.mixer.Sound("Audio/sound-effects/Throw-fruit.wav")
 explosion_sound = pygame.mixer.Sound("Audio/sound-effects/Bomb-explode.wav")
 
-# Load images
+# Game images
 background_image = pygame.transform.scale(pygame.image.load("Image/background.png"), (800, 600))
 play_button = pygame.transform.scale(pygame.image.load("Image/play.png"), (250, 250))
 play_select = pygame.transform.scale(pygame.image.load("Image/play2.png"), (250, 250))
@@ -99,7 +101,6 @@ quit_img = pygame.transform.scale(pygame.image.load("Image/quit_img.png"), (150,
 replay_img = pygame.transform.scale(pygame.image.load("Image/replay.png"), (150, 150))
 
 
-# Game assets
 FRUIT_IMAGE = [
     pygame.transform.scale(pygame.image.load("Image/apple.png"), (80, 80)),
     pygame.transform.scale(pygame.image.load("Image/banana.png"), (80, 80)),
@@ -117,12 +118,12 @@ FRUIT_SPLASH = [
     pygame.transform.scale(pygame.image.load("Image/splash_yellow.png"), (80, 80)),
 ]
 
-# Menu rectangles
 play_click = pygame.Rect(300, 200, 200, 80)
 settings_click = pygame.Rect(300, 300, 200, 80)
 score_click = pygame.Rect(300,400, 200, 80)
 achivement_click = pygame.Rect(680,0,80,80)
 
+# Game Classes
 class Fruit:
     def __init__(self, letter, image, x, y, vx, vy):
         self.letter = letter
@@ -221,7 +222,7 @@ class Game:
         self.ice_cubes = []
         self.splashes = []
         self.frozen = False
-        self.frozen_timer = 5000
+        self.frozen_timer = 0
         self.mode = 'keyboard'
         self.speed = INITIAL_SPEED
         self.running = True
@@ -230,16 +231,16 @@ class Game:
         self.paused = False
         self.combo_message = None 
         self.combo_timer = 0
-
-
         self.load_achievements()
 
+    # Define max num of objects on the screen
     def get_max_objects(self):
         return 1 + self.level
 
     def get_total_objects(self):
         return len(self.fruits) + len(self.bombs) + len(self.ice_cubes)
 
+    # Game input: keyboard
     def handle_key_press(self, key):
         try:
             key_char = chr(key).upper()
@@ -247,9 +248,7 @@ class Game:
             return
         self.slice_objects(key_char=key_char)
 
-    def handle_swipe(self, position):
-        self.slice_objects(position=position)
-
+    # Function for fruit slicing
     def slice_objects(self, key_char=None, position=None):
         if key_char:
             sliced_fruits = [fruit for fruit in self.fruits if fruit.letter == key_char]
@@ -290,17 +289,17 @@ class Game:
             self.ice_cubes = [ice_cube for ice_cube in self.ice_cubes if ice_cube not in sliced_ice_cubes]
 
     def check_achievements(self):
-        if self.fruits_cut >= 10 and not self.achievements["fruit_master"]:
+        if self.fruits_cut >= 100 and not self.achievements["fruit_master"]:
             self.achievements["fruit_master"] = True
             self.save_achievements()
             print("Fruit Master débloqué !")
 
-        if self.bombs_dodged >= 1 and not self.achievements["bomb_dodger"]:
+        if self.bombs_dodged >= 10 and not self.achievements["bomb_dodger"]:
             self.achievements["bomb_dodger"] = True
             self.save_achievements()
             print("Bomb Dodger débloqué !")
 
-        if self.ice_cubes_cut >= 1 and not self.achievements["ice_breaker"]:
+        if self.ice_cubes_cut >= 5 and not self.achievements["ice_breaker"]:
             self.achievements["ice_breaker"] = True
             self.save_achievements() 
             print("Ice Breaker débloqué !")
@@ -321,7 +320,7 @@ class Game:
     def count_unlocked_achievements(self):
         return sum(1 for achievement in self.achievements.values() if achievement)
 
-
+    # Game update method
     def update(self):
         current_time = pygame.time.get_ticks()
 
@@ -347,6 +346,7 @@ class Game:
             for splash in self.splashes:
                 splash["timer"] -= 16
 
+            # Remove objects from screen
             fruits_to_remove = []
             for fruit in self.fruits[:]:
                 if fruit.has_peaked and fruit.rect.y >= SCREEN_HEIGHT:
@@ -378,7 +378,7 @@ class Game:
         pygame.display.flip()
         pygame.time.delay(5000) 
 
-
+    # Function to spawn fruits on the screen
     def spawn_objects(self):
         x = random.randint(0, SCREEN_WIDTH - 50)
         y = SCREEN_HEIGHT
@@ -401,12 +401,12 @@ class Game:
                 self.ice_cubes.append(IceCube(letter, ICE_CUBE_IMAGE, x, y, vx, vy))
                 pygame.mixer.Sound.play(throw_sound)
 
+    # Drawing elements on the screen 
     def draw(self, screen):
         screen.blit(background_image, (0, 0))
         
         for splash in self.splashes:
-            screen.blit(splash["image"], splash["position"])
-            
+            screen.blit(splash["image"], splash["position"])   
         for fruit in self.fruits:
             fruit.draw(screen)
         for bomb in self.bombs:
@@ -499,8 +499,7 @@ class Game:
         screen.blit(cursor_img, (mouse_x, mouse_y))
         pygame.display.flip() 
 
-
-
+    # Game over function
     def end_game(self):
         self.running = False
         pygame.mixer.stop()
@@ -514,7 +513,6 @@ class Game:
         text = ''
         done = False
         
-
         try:
             with open('score.json', 'r') as f:
                 scores = json.load(f)
@@ -793,10 +791,6 @@ def achivement(game):
 
 
         pygame.display.update()
-    
-
-
-
 
 def main_menu(game):
     selected = 0
