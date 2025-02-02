@@ -7,8 +7,7 @@ import os
 pygame.init()
 pygame.mixer.init()
 
-# Game Constants
-
+# Screen settings
 SCREEN_WIDTH = 800
 SCREEN_HEIGHT = 600
 screen = pygame.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT))
@@ -21,6 +20,7 @@ cursor_img = pygame.image.load("Image/shuriken_cursor.png")
 cursor_img = pygame.transform.scale(cursor_img, (50, 50))
 pygame.mouse.set_visible(False)
 
+# Colors
 WHITE = (255, 255, 255)
 BLACK = (0, 0, 0)
 RED = (255, 0, 0)
@@ -28,19 +28,17 @@ GREEN = (0, 255, 0)
 BLUE = (0, 0, 255)
 GRAY = (79, 79, 79)
 
-# Game variables
+# Game constants
 GRAVITY = 0.3
 BASE_SPEED = 0.001
 INITIAL_SPEED = BASE_SPEED / 2
 LEVEL_SPEED_INCREASE = 1.3
-FRUIT_LETTERS = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
+FRUIT_LETTERS = "ABCDE"
 FONT = pygame.font.Font("Image/CFCrayons-Regular.ttf", 50)
 font_s = pygame.font.Font("Image/CFCrayons-Regular.ttf", 25)
 font_xs = pygame.font.Font("Image/CFCrayons-Regular.ttf", 15)
 
-# Asset imports 
-
-# Music
+# Audio files
 
 menu_music =  pygame.mixer_music.load("Audio/Menu_Music.mp3")
 next_sound = pygame.mixer.Sound("Audio/sound-effects/Next_button.wav")
@@ -59,7 +57,7 @@ best_sound =  pygame.mixer.Sound("Audio/sound-effects/New-best-score.wav")
 throw_sound = pygame.mixer.Sound("Audio/sound-effects/Throw-fruit.wav")
 explosion_sound = pygame.mixer.Sound("Audio/sound-effects/Bomb-explode.wav")
 
-# Images
+# Load images
 background_image = pygame.transform.scale(pygame.image.load("Image/background.png"), (800, 600))
 play_button = pygame.transform.scale(pygame.image.load("Image/play.png"), (250, 250))
 play_select = pygame.transform.scale(pygame.image.load("Image/play2.png"), (250, 250))
@@ -95,8 +93,13 @@ achivement_icon = pygame.transform.scale(pygame.image.load("Image/Achivement.png
 achivement_case = pygame.transform.scale(pygame.image.load("Image/achiv_case.png"), (50, 50))
 achivement_box = pygame.transform.scale(pygame.image.load("Image/achiv_contener.png"), (550, 200))
 achivement_win = pygame.transform.scale(pygame.image.load("Image/Achivement.png"), (50, 50))
+pause_img = pygame.transform.scale(pygame.image.load("Image/pause.png"), (80, 80))
+resume_img = pygame.transform.scale(pygame.image.load("Image/resume.png"), (150, 150))
+quit_img = pygame.transform.scale(pygame.image.load("Image/quit_img.png"), (150, 150))
+replay_img = pygame.transform.scale(pygame.image.load("Image/replay.png"), (150, 150))
 
 
+# Game assets
 FRUIT_IMAGE = [
     pygame.transform.scale(pygame.image.load("Image/apple.png"), (80, 80)),
     pygame.transform.scale(pygame.image.load("Image/banana.png"), (80, 80)),
@@ -119,8 +122,6 @@ play_click = pygame.Rect(300, 200, 200, 80)
 settings_click = pygame.Rect(300, 300, 200, 80)
 score_click = pygame.Rect(300,400, 200, 80)
 achivement_click = pygame.Rect(680,0,80,80)
-
-# Game Classes
 
 class Fruit:
     def __init__(self, letter, image, x, y, vx, vy):
@@ -220,23 +221,25 @@ class Game:
         self.ice_cubes = []
         self.splashes = []
         self.frozen = False
-        self.frozen_timer = 0
+        self.frozen_timer = 5000
         self.mode = 'keyboard'
         self.speed = INITIAL_SPEED
         self.running = True
         self.best = False
         self.best_timer = 0 
+        self.paused = False
+        self.combo_message = None 
+        self.combo_timer = 0
+
 
         self.load_achievements()
 
-    # Check max num of objects on the screen
     def get_max_objects(self):
         return 1 + self.level
 
     def get_total_objects(self):
         return len(self.fruits) + len(self.bombs) + len(self.ice_cubes)
 
-    # Get key press to slice fruit
     def handle_key_press(self, key):
         try:
             key_char = chr(key).upper()
@@ -244,29 +247,29 @@ class Game:
             return
         self.slice_objects(key_char=key_char)
 
-    # Function for fruit slicing 
+    def handle_swipe(self, position):
+        self.slice_objects(position=position)
+
     def slice_objects(self, key_char=None, position=None):
         if key_char:
             sliced_fruits = [fruit for fruit in self.fruits if fruit.letter == key_char]
             sliced_bombs = [bomb for bomb in self.bombs if bomb.letter == key_char]
             sliced_ice_cubes = [ice_cube for ice_cube in self.ice_cubes if ice_cube.letter == key_char]
 
-        if sliced_fruits:
-            self.fruits_cut += len(sliced_fruits)
-            self.score += len(sliced_fruits)
-            self.fruits = [fruit for fruit in self.fruits if fruit not in sliced_fruits]
-            
-            for fruit in sliced_fruits:
-                splash_image = random.choice(FRUIT_SPLASH)
-                pygame.mixer.Sound.play(fruit.sound)
-                self.splashes.append({"image": splash_image, "position": fruit.rect.topleft, "timer": 500})
+        combo_count = len(sliced_fruits)
 
-            if self.score > 0 and self.score % 10 == 0:
-                self.level += 1
-                if self.level == 2:
-                    self.speed = BASE_SPEED
-                else:
-                    self.speed *= LEVEL_SPEED_INCREASE
+        if combo_count > 0:
+            self.fruits_cut += combo_count 
+            self.score += combo_count * combo_count 
+
+        for fruit in sliced_fruits:
+            pygame.mixer.Sound.play(fruit.sound)
+
+        self.fruits = [fruit for fruit in self.fruits if fruit not in sliced_fruits]
+
+        if combo_count > 1:
+            self.combo_message = f"Combo x{combo_count}!"
+            self.combo_timer = pygame.time.get_ticks()
 
         if sliced_bombs:
             sliced_bomb = sliced_bombs[0]
@@ -318,7 +321,7 @@ class Game:
     def count_unlocked_achievements(self):
         return sum(1 for achievement in self.achievements.values() if achievement)
 
-    # Game update function
+
     def update(self):
         current_time = pygame.time.get_ticks()
 
@@ -369,7 +372,13 @@ class Game:
             if self.get_total_objects() < self.get_max_objects():
                 self.spawn_objects()
 
-    # Function to spawn fruits
+    def show_combo(self, combo_count):
+        text = FONT.render(f"Combo x{combo_count}!", True, RED)
+        screen.blit(text, (SCREEN_WIDTH // 2 - 50, SCREEN_HEIGHT // 2 - 50))  
+        pygame.display.flip()
+        pygame.time.delay(5000) 
+
+
     def spawn_objects(self):
         x = random.randint(0, SCREEN_WIDTH - 50)
         y = SCREEN_HEIGHT
@@ -392,7 +401,6 @@ class Game:
                 self.ice_cubes.append(IceCube(letter, ICE_CUBE_IMAGE, x, y, vx, vy))
                 pygame.mixer.Sound.play(throw_sound)
 
-    # Function to draw elements on the screen
     def draw(self, screen):
         screen.blit(background_image, (0, 0))
         
@@ -405,6 +413,13 @@ class Game:
             bomb.draw(screen)
         for ice_cube in self.ice_cubes:
             ice_cube.draw(screen)
+
+
+        if self.combo_message and pygame.time.get_ticks() - self.combo_timer < 1000:
+            combo_text = FONT.render(self.combo_message, True, RED)
+            screen.blit(combo_text, (SCREEN_WIDTH // 2 - 50, SCREEN_HEIGHT // 2 - 50))
+        else:
+            self.combo_message = None
 
         if self.explosion:
             screen.blit(self.explosion["image"], self.explosion["position"])
@@ -428,13 +443,21 @@ class Game:
             self.best_score_timer = pygame.time.get_ticks() 
         
         if self.best and pygame.time.get_ticks() - self.best_score_timer < 3000:
-            best_text = FONT.render("BEST SCORE", True, BLACK)
-            screen.blit(best_text, (275, 100))
+            if LANGUAGE == "en":
+                best_text = FONT.render("BEST SCORE", True, BLACK)
+                screen.blit(best_text, (275, 100))
+            elif LANGUAGE =="fr":
+                best_text = FONT.render("MEILLEUR SCORE", True, BLACK)
+                screen.blit(best_text, (250, 100))
+    
 
         score_text = FONT.render(f" : {self.score}", True, BLACK)
         screen.blit(score_text, (50, 15))
         screen.blit(pygame.transform.scale(FRUIT_IMAGE[0], (50, 50)), (0, 10))
-        best_text = font_s.render(f"BEST : {best_score} ", True,BLACK)
+        if LANGUAGE == "en":
+            best_text = font_s.render(f"BEST : {best_score} ", True,BLACK)
+        elif LANGUAGE == "fr":
+            best_text = font_s.render(f"MEILLEUR : {best_score} ", True,BLACK)
         screen.blit(best_text, (10, 60))
         
         for i in range(3):
@@ -445,12 +468,39 @@ class Game:
 
         if self.frozen:
             frozen_text = FONT.render("FROZEN!", True, BLUE)
-            screen.blit(frozen_text, (SCREEN_WIDTH - 150, 10))
+            screen.blit(frozen_text, (SCREEN_WIDTH - 475, 150))
+
+        screen.blit(pause_img, (10, SCREEN_HEIGHT - 80))
+        self.pause_rect = pygame.Rect(10, SCREEN_HEIGHT - 80, 80, 80)
 
         mouse_x, mouse_y = pygame.mouse.get_pos()
         screen.blit(cursor_img, (mouse_x, mouse_y))
 
-    # Function to end game
+    def draw_pause_menu(self, screen):
+        pause_menu_rect = pygame.Rect(250, 200, 300, 200)
+        screen.blit(draw_menu,(0,50))  # Bordure blanche
+
+        pause_text = FONT.render("Pause", True, (0, 0, 0))
+        screen.blit(pause_text, (350,150))
+
+        self.resume_rect = pygame.Rect(225, 250, 100, 100)
+        pygame.draw.rect(screen,GREEN, self.resume_rect,3)
+        screen.blit(resume_img,(200,225))
+
+        self.quit_rect = pygame.Rect(350, 250, 100, 100)
+        pygame.draw.rect(screen,GREEN, self.quit_rect,3)
+        screen.blit(quit_img,(325,225))
+
+        self.replay_rect = pygame.Rect(475, 250, 100, 100)
+        pygame.draw.rect(screen,GREEN, self.replay_rect,3)
+        screen.blit(replay_img,(450,225))
+
+        mouse_x, mouse_y = pygame.mouse.get_pos()
+        screen.blit(cursor_img, (mouse_x, mouse_y))
+        pygame.display.flip()  # Mettre à jour l'affichage
+
+
+
     def end_game(self):
         self.running = False
         pygame.mixer.stop()
@@ -534,9 +584,6 @@ class Game:
             
             pygame.display.flip()
 
-# Menu system 
-
-# Settings menu
 def settings_menu():
     global LANGUAGE
     global cursor_img
@@ -592,9 +639,11 @@ def settings_menu():
 
         if LANGUAGE == "en":
             language_text = title_font.render("Language : ", True, BLACK)
+            music_text= title_font.render("Musics : ", True, BLACK)
         elif LANGUAGE == "fr":
             language_text = title_font.render("Langues : ", True, BLACK)
-        music_text= title_font.render("Musics : ", True, BLACK)
+            music_text= title_font.render("Musiques : ", True, BLACK)
+
         screen.blit(background_image, (0, 0))
         screen.blit(draw_menu, (0, 50))
         screen.blit(language_text, (200,150))
@@ -676,7 +725,6 @@ def leaderboard():
 
         pygame.display.update()
 
-# Various game modes: 'Fruit master',  'Bomb dodger' and 'Ice Breaker'
 def achivement(game):
     running = True
     title_font = pygame.font.Font("Image/CFCrayons-Regular.ttf", 70)
@@ -738,11 +786,18 @@ def achivement(game):
             three_text = font_xs.render("Coupez 5 glacons en une seule partie",True, BLACK)
             screen.blit(three_title_text,(355,430))
             screen.blit(three_text,(300,470))
+
+        mouse_x, mouse_y = pygame.mouse.get_pos()
+        screen.blit(cursor_img, (mouse_x, mouse_y))
         
 
-        pygame.display.update()
 
-# Main menu
+        pygame.display.update()
+    
+
+
+
+
 def main_menu(game):
     selected = 0
     running = True
@@ -914,18 +969,18 @@ def main_menu(game):
 
     return None
 
-# Main game funct
 def main():
     clock = pygame.time.Clock()
-    game= Game()
+    game = Game()
     
     while True:
         menu_result = main_menu(game)
         
         if menu_result == "play":
             game = Game()
+            return_to_menu = False
             
-            while game.running:
+            while game.running and not return_to_menu: 
                 for event in pygame.event.get():
                     if event.type == pygame.QUIT:
                         pygame.quit()
@@ -933,12 +988,43 @@ def main():
                     if event.type == pygame.KEYDOWN:
                         if event.key == pygame.K_ESCAPE:
                             game.running = False
+                        elif event.key == pygame.K_SPACE:
+                            game.paused = not game.paused 
+                            print("Jeu en pause" if game.paused else "Reprise du jeu")
                         else:
                             game.handle_key_press(event.key)
-                    elif game.mode == 'mouse' and event.type == pygame.MOUSEBUTTONDOWN:
-                        game.handle_swipe(event.pos)
+                    if event.type == pygame.MOUSEBUTTONDOWN:
+                        if event.button == 1: 
+                            mouse_pos = pygame.mouse.get_pos()
+                            if game.pause_rect.collidepoint(mouse_pos):
+                                game.paused = not game.paused
+                                print("Jeu en pause" if game.paused else "Reprise du jeu")
 
-                game.update()
+                if game.paused:
+                    while game.paused:
+                        screen.blit(background_image, (0, 0))
+                        game.draw_pause_menu(screen)
+                        pygame.display.flip()
+
+                        for event in pygame.event.get():
+                            if event.type == pygame.QUIT:
+                                pygame.quit()
+                                sys.exit()
+                            if event.type == pygame.MOUSEBUTTONDOWN:
+                                if event.button == 1:
+                                    mouse_pos = pygame.mouse.get_pos()
+                                    if game.resume_rect.collidepoint(mouse_pos):
+                                        game.paused = False
+                                        print("Reprise du jeu")
+                                    elif game.quit_rect.collidepoint(mouse_pos):
+                                        return_to_menu = True 
+                                        game.paused = False
+                                    elif game.replay_rect.collidepoint(mouse_pos):
+                                        game = Game() 
+                                        game.paused = False
+                else:
+                    game.update()
+
                 game.draw(screen)
                 pygame.display.flip()
                 clock.tick(60)
